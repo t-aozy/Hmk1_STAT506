@@ -1,0 +1,552 @@
+---
+title: "Hmk1" 
+author: "Ziyi Tao" 
+format:
+  html:
+    code-fold: true
+    code-tools: true
+toc: true
+---
+
+Link for GitHub : <https://github.com/t-aozy/Hmk1_STAT506>
+
+## Problem 1 - Wine Data
+
+## a. Import data and name columns
+
+The file is imported from "D:/wine/" in my environment. According to the information provided by the data set, columns are named as : "class", "alcohol", "malicacid", "ash", "alcalinity_of_ash", "magnesim", "total_phenols", "flava", "nonflav_phenols", "proantho", "color_intensity", "hue", "diluted_wines", "proline".
+
+```{r}
+library(DT)
+```
+
+```{r}
+# a import data and name columns} 
+data_wine <- read.table("D:/wine/wine.data", sep = ",")  
+names(data_wine) <- c("class", "alcohol", "malicacid", "ash",
+                      "alcalinity_of_ash", "magnesim",
+                      "total_phenols", "flava", "nonflav_phenols",
+                      "proantho", "color_intensity", "hue",
+                      "diluted_wines", "proline")  
+
+datatable(data_wine, width =  "auto")
+
+```
+
+## b. Classes of wine
+
+According to the result of R code, there are 3 classes of wines. Class 1 has 59 instances, class 2 has 71 instances and class 3 has 48 instances, this is the same as the information provided by file wine.names.
+
+```{r}
+table(data_wine$class)
+```
+
+## c. Use the data to answer following questions
+
+### 1. The correlation between alcohol content and color intensity
+
+R result shows the correlation coefficient is 0.546. The correlation between alcohol content and color intensity is positive, wines with higher alcohol content are likely to have higher color intensity.
+
+```{r}
+alcohol_color <- cor(data_wine$alcohol, data_wine$color_intensity) 
+
+cat("Correlation between alcohol and color intensity:",alcohol_color)
+```
+
+### 2. Class with the highest and the lowest correlation
+
+R result shows that class 1 has the highest correlation and class 2 has the lowest correlation.
+
+```{r}
+# extract data from each class using index search 
+wine_c1 <- data_wine[data_wine["class"] == 1,] 
+wine_c2 <- data_wine[data_wine["class"] == 2,] 
+wine_c3 <- data_wine[data_wine["class"] == 3,]  
+
+
+# calculate the correlation in each class 
+r_c1 <- cor(wine_c1$alcohol, wine_c1$color_intensity) 
+r_c2 <- cor(wine_c2$alcohol, wine_c2$color_intensity) 
+r_c3 <- cor(wine_c3$alcohol, wine_c3$color_intensity)  
+
+cat(" Correlation of Class 1:", r_c1, "\n", 
+    "Correlation of Class 2:", r_c2, "\n", 
+    "Correlation of Class 3:", r_c3, "\n")
+```
+
+### 3. Alcohol content of the wine with the highest color intensity
+
+The Alcohol content of the wine with the highest color intensity is 14.34.
+
+```{r}
+# calculate the maximum of color_intensity 
+color_max <- max(data_wine$color_intensity) 
+
+# filter data
+data_wine[data_wine$color_intensity == color_max, "alcohol"]
+```
+
+### 4. Percentage of wines with higher content of proanthocyanins compare to ash
+
+The Percentage of wines with higher content of proanthocyanins compare to ash is 8.43%.
+
+```{r}
+# define condition 
+condition <- (data_wine$proantho > data_wine$ash) 
+
+# filter data 
+proanto_higher_ash <- data_wine[condition == TRUE,] 
+percentage <- nrow(proanto_higher_ash*1.0)/nrow(data_wine) 
+cat("Percentage:", percentage)
+```
+
+## d. Create table
+
+```{r}
+# calculate mean value
+total_aver <- sapply(data_wine[,2:length(data_wine)], mean) 
+c1_aver <- sapply(wine_c1[,2:length(data_wine)], mean) 
+c2_aver <- sapply(wine_c2[,2:length(data_wine)], mean) 
+c3_aver <- sapply(wine_c3[,2:length(data_wine)], mean)  
+
+# form a table 
+datatable(
+  round(
+    as.data.frame(rbind(total_aver, c1_aver, c2_aver, c3_aver), 
+                  width =  "auto"),
+    digits = 4
+  )
+  
+)
+
+```
+
+## e. T test
+
+Yes, according to T test, the level of phenols differs across the three class, p-value \< 0.05.
+
+Strictly, we need first to test some assumptions before conduct t-test. So I also list the assumption test results below.
+
+```{r}
+t.test(wine_c1$total_phenols, wine_c2$total_phenols) 
+t.test(wine_c1$total_phenols, wine_c3$total_phenols) 
+t.test(wine_c2$total_phenols, wine_c3$total_phenols)
+
+
+```
+
+According to the result, we have evidence to reject the hypothesis that total_phenols in class1 and class2 is normal distribution. Also, we have evidence to reject the hypothesis of homoskedasticity between class1, class2 and class2, class3.
+
+```{r}
+
+# normal distribution test
+shapiro.test(wine_c1$total_phenols)
+shapiro.test(wine_c2$total_phenols)
+shapiro.test(wine_c3$total_phenols)
+# homoskedasticity test
+var.test(total_phenols~class, data = data_wine[data_wine$class %in% c(1, 2),])
+var.test(total_phenols~class, data = data_wine[data_wine$class %in% c(1, 3),])
+var.test(total_phenols~class, data = data_wine[data_wine$class %in% c(2, 3),])
+```
+
+## e.plus Calculate p-values
+
+```{r}
+# calculate sample size and sample std
+n1 <- nrow(wine_c1)
+n2 <- nrow(wine_c2)
+n3 <- nrow(wine_c3)
+
+mean1 <- mean(wine_c1$total_phenols)
+mean2 <- mean(wine_c2$total_phenols)
+mean3 <- mean(wine_c3$total_phenols)
+
+# sample std
+s1 <- sd(wine_c1$total_phenols)
+s2 <- sd(wine_c2$total_phenols)
+s3 <- sd(wine_c3$total_phenols)
+
+```
+
+```{r}
+#' sp
+#' 
+#' @param n1 sample size of sample1
+#' @param n2 sample size of sample2
+#' @param s1 standard deviation of sample1
+#' @param s2 standard deviation of sample2
+#'
+#' @return 
+#'  the sp value of two samples with sample size n1, n2, standard deviation s1, s2
+
+sp <- function(n1, n2, s1, s2){
+  sqrt(((n1-1)*s1^2 + (n2-1)*s2^2)/(n1+n2-2))
+}
+```
+
+```{r}
+#' t
+#'
+#' @param m1 mean value of sample1
+#' @param m2 mean value of sample2
+#' @param n_1 sample size of sample1
+#' @param n_2 sample size of sample2
+#' @param sp_ sp value
+#'
+#' @return
+#'  t score of two samples with average values m1, m2, sample size n1, n2, sp value
+t <- function(m1, m2, n_1, n_2, sp_){
+  return ((m1-m2)/(sp_*sqrt(1/n_1+1/n_2)))
+}
+
+```
+
+```{r}
+t_12 <- t(mean1, mean2, n1, n2, sp(n1, n2, s1, s2))
+t_13 <- t(mean1, mean3, n1, n3, sp(n1, n3, s1, s3))
+t_23 <- t(mean2, mean3, n2, n3, sp(n2, n3, s2, s3))
+
+cat(" p-value c1&c2:", 
+    2*pt(t_12, (n1+n2-2), lower.tail = FALSE),"\n",
+    "p-value c1&c3:", 
+    2*pt(t_13, (n1+n3-2),lower.tail = FALSE), "\n",
+    "p-value c2&c3:", 
+    2*pt(t_23, (n2+n3-2),lower.tail = FALSE)
+    )
+
+```
+
+## Problem 2 - AskAManager
+
+## a. Import data
+
+The file is imported from "D:/" in my environment.
+
+```{r}
+data_manager <- read.table("D:/AskAManager.csv", sep = ",", header = TRUE) 
+datatable(head(data_manager), width =  "auto")
+```
+
+## b. Rename columns
+
+```{r}
+names_manager <- c("id", "time", "age", "industry", "job",
+                   "job_add", "salary_yearly", "money_somp",
+                   "currency", "currency_add",  "income_add",
+                   "country_work", "states_us", "city",
+                   "exp_overall", "exp_pro", "edu", "gender",
+                   "race") 
+names(data_manager) <- names_manager 
+
+datatable(head(data_manager), width =  "auto")
+```
+
+## c. Restrict data
+
+A rough way to filter the data is based on "currency", but as I looked though the values of "currency_add" variable, some people still gave the answer "USD". Therefore, I provided 2 types of conditions to filter the data, condition_1 is based entirely on variable "currency" and condition_2 consider both "currency" and "currency_add". Owing to the uncertainty of the variable "currency_add", the rest analysis is done based on data filtered by condition_1.
+
+```{r}
+# condition 
+condition_1 <- data_manager$currency == "USD" 
+condition_2 <- (data_manager$currency == "USD") |
+               (data_manager$currency_add == "USD") 
+# filter data 
+new_data_manager <- data_manager[condition_1 == TRUE,]  
+
+# observations before and after 
+cat(" Number of observations before filteration:", nrow(data_manager), "\n",
+    "Number of observations after filteration:", nrow(new_data_manager)
+    )
+```
+
+## d. Filter age
+
+There are three types of observations that need to be eliminated, one type is observations with the variable "age" = "under 18" as we assume no one starts working before age 18. The second type is individuals with more working experience in the professional area than total experience. The last type is given the overall experience or experience in the professional area and individual's age, he/she must has started work before age 18.
+
+```{r}
+library(dplyr) 
+# convert variables to factor 
+new_data_manager$age <- as.factor(new_data_manager$age)
+new_data_manager$exp_overall <- as.factor(new_data_manager$exp_overall)
+new_data_manager$exp_pro <- as.factor(new_data_manager$exp_pro)
+
+# reorder levels 
+new_level <- c("1 year or less", "2 - 4 years", "5 - 7 years", "8 - 10 years",                 "11 - 20 years", "21 - 30 years", "31 - 40 years", "41 years or more") 
+levels(new_data_manager$exp_overall) <- new_level  
+levels(new_data_manager$exp_pro) <- new_level  
+
+# create condition 
+condi_overal_exp <- (new_data_manager$age == "18-24" &
+                     new_data_manager$exp_overall %in% c("11 - 20 years",
+                                                         "21 - 30 years",
+                                                         "31 - 40 years",
+                                                         "41 years or more") )|                        (new_data_manager$age == "25-34" &                                                  new_data_manager$exp_overall %in% c("21 - 30 years",
+                                                         "31 - 40 years",
+                                                         "41 years or more") )|                        (new_data_manager$age == "35-44" &
+                     new_data_manager$exp_overall %in% c("31 - 40 years",
+                                                         "41 years or more") )|                        (new_data_manager$age == "45-54" &
+                     new_data_manager$exp_overall %in% c("41 years or more") )  
+
+# filter data 
+filtered <- new_data_manager %>%    
+  # filter given overall exp, individual began working before 18   
+  filter(!condi_overal_exp)%>%   
+  # filter given pro exp, individual began working before 18   
+  filter(!((age == "18-24" & exp_pro %in% c("11 - 20 years", "21 - 30 years",
+                                            "31 - 40 years", "41 years or more"))|          
+            (age == "25-34" & exp_pro %in% c("21 - 30 years", "31 - 40 years",
+                                             "41 years or more"))|
+           (age == "35-44" & exp_pro %in% c("31 - 40 years", "41 years or more"))|
+           (age == "45-54" & exp_pro %in% c("41 years or more"))
+           ))%>%   
+  # filter age < 18   
+  filter( !age %in% c("under 18")) %>%   
+  # filter overall exp higher than pro    
+  mutate_at(vars(starts_with("exp")), 
+            factor, 
+            levels = new_level, 
+            ordered = TRUE)%>%   
+  mutate(comp = exp_overall < exp_pro)%>%   
+  filter(comp == FALSE)   
+
+datatable(head(filtered), width =  "auto")
+
+```
+
+## e. Eliminate outliers
+
+According to the summary of the data, the highest yearly salary came to 500044, and the lowest equal to 0. I use Z-score to eliminate outliers. We consider x with \|z-score\| \> 3 outliers. According to r result, people earning 3 standard deviations above the mean get more than \$360322 every year. People earning 3 standard deviations below the mean get negative salaries every year, so I filtered all the individuals who earn more than 360322 each year, and for the left border, as the federal minimum salary is \$7.25 per hour according to (What Is the Minimum Wage in 2024? - NerdWallet), consider salary \< \$3000 as strange. ( A person works 10 hours per week gets \$3915 per year with the lowest salary per hour.
+
+The final sample size is 10385.
+
+```{r}
+# summary salaries 
+summary(filtered$salary_yearly) 
+
+# hist 
+hist(filtered[filtered$salary_yearly < 1e6,]$salary_yearly, 
+     main = "salary < 1e6",
+     xlab = "Yearly Salary"
+    ) 
+
+# use z score to eliminate outliers  
+filtered$z_score <- (filtered$salary_yearly-mean(filtered$salary_yearly))/   
+                    sd(filtered$salary_yearly)  
+mean(filtered$salary_yearly)-3*sd(filtered$salary_yearly)
+
+# final result 
+final <- filtered[filtered$salary_yearly > 300 & filtered$z_score < 3, ]
+cat("The final sample size is:", nrow(final))
+```
+
+## Problem 3 - Palindromic
+
+## a. Write isPalindromic
+
+```{r}
+#' isPalindromic
+#' @param x (positive integer)
+#' @return a list with 2 elements: 
+#'      isPalindromic:A logical value indicating if the input is palindromic. 
+#'      reversed: The input with its digits reversed. 
+#' @export 
+#' 
+#' @examples 
+#'     
+
+isPalindromic <- function(x){
+  # stop when x is a negative number or is not an integer   
+  if(x < 0) stop("Input is negative.")    
+  if(x %% 1 != 0) stop("Input is not an integer.")      
+  # return result if x = 0, stop if x ends with 0 (not reversible)   
+  if(x == 0){     
+    return (list("isPlindormic" = TRUE, " reversed" = 0))   
+  }else if(x %% 10 == 0){     
+    stop("x is not reversible.")
+  }else{     
+    # turn x into characters     
+    origin <- as.character(x)     
+    origin_split <- strsplit(origin, split = "") # string to list of letters
+    len <- length(origin_split[[1]])     
+    reversed_split <- origin_split[[1]][len:1] # reverse list using index 
+    reversed <- paste(reversed_split, collapse = "") # paste the reverse list 
+    if(origin == reversed){       
+      isPalindromic <- TRUE
+    }else{
+        isPalindromic <- FALSE
+    }     
+  }
+    return        
+      (list("isPalindromic" = isPalindromic, "reversed" = as.integer(reversed)))   }       
+```
+
+```{r}
+# test 
+isPalindromic(728827)
+
+```
+
+## b. Write nextPalindrome
+
+I tried two ways to form the function, please first refer to the second one (nextPalindrome) since the first one is constructed too complicated.
+
+### method 1
+
+I combined enumeration and many condition select and judegement to form the function.
+
+```{r}
+#' nextPalindrome1
+#'
+#' @param x Positive integer
+#'
+#' @return the next palidromic number 
+#' @export
+#'
+#' @examples
+nextPalindrome <- function(x){   
+  # stop when x is negative or is not an integer   
+  if(x < 0) stop("Input is negative.")   
+  if(x %% 1 != 0) stop("Input is not an integer.")      
+  # for single digit x less than 9, nextPalindrome is x+1   
+  if(x<=8){
+    return (x+1)
+  }else{     
+    # calculate the number of digits     
+    ## turn input into chracter     
+    origin <- as.character(x)     
+    origin_split <- as.integer(strsplit(origin, split = "")[[1]])     
+    len <- length(origin_split)          
+    # we first use enumeration to find the nextPalindrome, the enumeration range is from x+1 to  
+    # end_search. Ex.input = 12345, range = 12346-12400; input = 1267, range = 1268-1300. 
+    # If we fail to find one by numeration, we construct nextpalindrome.     
+    digit <- len %/% 2     
+    end_search <- x %/% (10^digit)*10^digit + 10^digit          
+    # conduct enmeration     
+    for(i in seq(x+1, end_search)){       
+      # skip if a number is not invertible during enumeration.       
+      skip <- FALSE       
+      tryCatch(isPa <- isPalindromic(i)$isPalindromic,
+               error = function(e){skip <<- TRUE})
+      if(skip == TRUE) next
+      if(isPa == TRUE) return(i)     
+    }          
+    # if enumeration fail, we construct next palindrome.     
+    mid <- len/2     
+    new_split <- origin_split          
+    # there are 2 different ways to construct next palindrome for numbers with odd and even digits.          
+    if(mid %% 1 != 0){       
+      mid <- len%/%2 + 1     
+    # for numbers with odd digits, if the middle digit is 9, take 1469543 as an        
+    #  example, we already knew that 1469544-1470000 are not palindromic, in this      
+    # case, we starts from 1470000, fix number 147 0 and reverse 147, add to the       
+    #  end. if middle digit is not 9, say, 15678, we simply add 1 to the middle        
+    # digit and turn 2:mid-1 digit to 0, fix digit 1:mid and reverse 1:mid-1, ex.      
+    # 15678 -> 15778 -> 10779 -> 10701              
+     if(origin_split[mid]!=9){         
+       new_split[mid] <- new_split[mid] + 1         
+       if(mid+1 <= len-1) new_split[(mid+1):len-1] <- 0         
+       if(2 <= mid-1) new_split[2:mid-1] <- 0         
+       new_split[len] <- new_split[1]       
+     }else{         
+        if(all(origin_split[1:mid] == 9) == TRUE){
+          return (10^(2*mid-1)+1)         
+        }else{
+          end_search <- as.character(end_search)     
+          end_search_split <- as.integer(strsplit(end_search, split = "")[[1]])   
+          new_split <- end_search_split
+          new_split[(mid+1):len] <- new_split[mid-1:1]
+        }
+     }
+    }else{
+        if(origin_split[mid]!=9){
+          new_split[mid] <- new_split[mid]+1
+          new_split[(mid+1):len] <- new_split[mid:1]
+        }else{
+            if(all(origin_split[1:mid] == 9) == TRUE){
+              return (10^(2*mid)+1)
+            }else{
+                end_search <- as.character(end_search)     
+                end_search_split <- as.integer(strsplit(end_search, 
+                                                        split = "")[[1]])   
+                new_split <- end_search_split
+                new_split[(mid+1):len] <- new_split[mid:1]
+            }
+        }
+    }
+    res <- paste(as.character(new_split), collapse = "")
+    return(as.integer(res))
+  } 
+  }
+```
+
+### method 2 enumeration
+
+I use enumeration to form the function.
+
+```{r}
+#' nextPalindrome1
+#'
+#' @param x Positive integer
+#'
+#' @return the next palidromic number 
+#' @export
+#'
+#' @examples
+nextPalindrome1 <- function(x){
+  # stop when x is negative or is not an integer   
+  if(x < 0){
+    stop("Input is negative.")
+  }    
+  if(x %% 1 != 0){
+    stop("Input is not an integer.")
+  }     
+  
+  origin <- as.character(x)     
+  origin_split <- as.integer(strsplit(origin, split = "")[[1]])     
+  len <- length(origin_split)          
+     
+  # find the range of enumeration
+  if(len/2 %% 1 == 0){
+    digit <- len / 2 
+    end_search <- x %/% (10^digit)*10^digit + 10^digit
+  }else{
+    digit <- len %/% 2 + 1 
+    end_search <- x %/% (10^digit)*10^digit + 10^digit
+  }
+  for(i in seq(x+1, end_search)){       
+      # skip if a number is not invertible during enumeration.       
+      skip <- FALSE       
+      tryCatch(isPa <- isPalindromic(i)$isPalindromic,
+               error = function(e){skip <<- TRUE})
+      if(skip == TRUE) next
+      if(isPa == TRUE) return(i)     
+  }   
+  
+  
+}
+```
+
+## c. Test
+
+```{r}
+# test nextPlindrome
+cat(
+  " Input: 391, Output:", nextPalindrome(391), "\n",
+  "Input: 9928, Output:", nextPalindrome(9928), "\n",
+  "Input: 9928, Output:", nextPalindrome(19272719), "\n",
+  "Input: 109, Output:", nextPalindrome(109), "\n",
+  "Input: 2, Output:", nextPalindrome(2), "\n"
+  )
+  
+```
+
+```{r}
+# test nextPlindrome1
+cat(
+  " Input: 391, Output:", nextPalindrome1(391), "\n",
+  "Input: 9928, Output:", nextPalindrome1(9928), "\n",
+  "Input: 19272719, Output:", nextPalindrome1(19272719), "\n",
+  "Input: 109, Output:", nextPalindrome1(109), "\n",
+  "Input: 2, Output:", nextPalindrome1(2), "\n"
+  )
+```
