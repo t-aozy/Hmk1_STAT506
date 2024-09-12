@@ -271,7 +271,8 @@ new_data_manager$exp_overall <- as.factor(new_data_manager$exp_overall)
 new_data_manager$exp_pro <- as.factor(new_data_manager$exp_pro)
 
 # reorder levels 
-new_level <- c("1 year or less", "2 - 4 years", "5 - 7 years", "8 - 10 years",                 "11 - 20 years", "21 - 30 years", "31 - 40 years", "41 years or more") 
+new_level <- c("1 year or less", "2 - 4 years", "5 - 7 years", "8 - 10 years",
+               "11 - 20 years", "21 - 30 years", "31 - 40 years", "41 years or more") 
 levels(new_data_manager$exp_overall) <- new_level  
 levels(new_data_manager$exp_pro) <- new_level  
 
@@ -280,11 +281,15 @@ condi_overal_exp <- (new_data_manager$age == "18-24" &
                      new_data_manager$exp_overall %in% c("11 - 20 years",
                                                          "21 - 30 years",
                                                          "31 - 40 years",
-                                                         "41 years or more") )|                        (new_data_manager$age == "25-34" &                                                  new_data_manager$exp_overall %in% c("21 - 30 years",
+                                                         "41 years or more") )|
+                    (new_data_manager$age == "25-34" & 
+                       new_data_manager$exp_overall %in% c("21 - 30 years",
                                                          "31 - 40 years",
-                                                         "41 years or more") )|                        (new_data_manager$age == "35-44" &
-                     new_data_manager$exp_overall %in% c("31 - 40 years",
-                                                         "41 years or more") )|                        (new_data_manager$age == "45-54" &
+                                                         "41 years or more") )| 
+                    (new_data_manager$age == "35-44" & 
+                       new_data_manager$exp_overall %in% c("31 - 40 years",
+                                                         "41 years or more") )| 
+                    (new_data_manager$age == "45-54" &
                      new_data_manager$exp_overall %in% c("41 years or more") )  
 
 # filter data 
@@ -533,7 +538,7 @@ nextPalindrome1 <- function(x){
 cat(
   " Input: 391, Output:", nextPalindrome(391), "\n",
   "Input: 9928, Output:", nextPalindrome(9928), "\n",
-  "Input: 9928, Output:", nextPalindrome(19272719), "\n",
+  "Input: 19272719, Output:", nextPalindrome(19272719), "\n",
   "Input: 109, Output:", nextPalindrome(109), "\n",
   "Input: 2, Output:", nextPalindrome(2), "\n"
   )
